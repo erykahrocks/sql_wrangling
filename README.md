@@ -21,9 +21,18 @@ password=asdf
 
 ## Then...
 
-Execute `python query_executor.py --prob \<prob_num\>`
+Execute `python query_executor.py --prob [1-5]`
 
 e.x. `python query_executor.py --prob 3`
+
+## For problem 6,
+
+Failed to solve it... :disappointed:
+
+* Emulating MATCH_RECOGNIZE in Oracle? [doc](https://oracle-base.com/articles/12c/pattern-matching-in-oracle-database-12cr1)
+* Some sophisticated usage of PARTITION BY
+* Introducing several intermediate table using WITH
+
 
 ## For problem 7,
 
