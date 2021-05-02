@@ -70,6 +70,34 @@ def connect(**kwargs):
     except (Exception, psycopg2.DatabaseError) as error:
         raise error
 
+def validate(pi: DefaultDict[str, str],
+             vo: DefaultDict[str, str],
+             de: Union[DefaultDict[str, str], None],
+             co: Union[DefaultDict[str, str], None]):
+    YEAR_FROM_DATE = 4
+
+    birth_year = pi.get('year_of_birth', None)
+    visit_start_date = vo.get('visit_start_date', None)
+
+    if not birth_year:
+        raise RequiredInfoMissingError('Person is missing required value: year_of_birth')
+    if not visit_start_date:
+        raise RequiredInfoMissingError('Visit occurrence is missing required value: visit_start_date')
+
+    # Only fetch year part
+    if birth_year > visit_start_date[:YEAR_FROM_DATE]:
+        raise NoteInvalidError()
+    if de:
+        drug_exposure_start_date = de.get('drug_exposure_start_date', None)
+        if not drug_exposure_start_date:
+            raise RequiredInfoMissingError('Drug exposure is missing required value: drug_exposure_start_date')
+        if birth_year > drug_exposure_start_date[:YEAR_FROM_DATE]:
+            raise NoteInvalidError()
+    if co:
+        condition_start_date = co.get('condition_start_date', None)
+        if not condition_start_date:
+            raise RequiredInfoMissingError('Condition is missing required value: condition_start_date')
+
 
 def main():
     conn = connect()
@@ -92,6 +120,9 @@ def main():
     pseudo_user_id_map = {}
     for record in map(_record_to_string, records):
         personal_info = get_personal_info(record)
+        vo, de, co = get_medical_info(record)
+        validate(personal_info, vo, de, co)
+
         pseudo_user_id = personal_info['pseudo_user_id']
         # duplicated user. No insertion needed
         if pseudo_user_id in pseudo_user_id_map:
@@ -100,23 +131,21 @@ def main():
             person_pk = _insert_with_pk(personal_info, 'person', conn)
             if person_pk is None:
                 logger.error('Person relation must be non-empty')
-                raise RequiredInfoMissingError
+                raise RequiredTableMissingError()
             pseudo_user_id_map[pseudo_user_id] = person_pk
 
-        vo, de, co = get_medical_info(record)
         # setting foreign key
         vo['person_id'] = person_pk
         vo_pk = _insert_with_pk(vo, 'visit_occurrence', conn)
         if vo_pk is None:
             logger.error('Visit occurrence relation must be non-empty')
-            raise RequiredInfoMissingError
+            raise RequiredTableMissingError()
 
         # setting foreign key again
         # could be empty table
         for table, name in zip(
                 [de,co], ['drug_exposure', 'condition_occurrence']):
             if not table:
-                logger.warning(f'Skipping table {name}')
                 continue
             table['person_id'] = person_pk
             table['visit_occurrence_id'] = vo_pk
