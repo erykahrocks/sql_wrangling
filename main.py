@@ -5,6 +5,7 @@ import logging
 import psycopg2
 import uuid
 
+from error import *
 from config import config
 from preprocess import get_personal_info, get_medical_info
 
@@ -50,7 +51,7 @@ def _insert_with_pk(table: DefaultDict[str, str], table_name: str, conn) -> Unio
                 continue
     if pk_val is None:
         logger.error(f"Insertion to {table_name} failed with {MAX_TRY} retries")
-        raise RuntimeError
+        raise DBInsertionError
     return pk_val
 
 def connect(**kwargs):
@@ -99,7 +100,7 @@ def main():
             person_pk = _insert_with_pk(personal_info, 'person', conn)
             if person_pk is None:
                 logger.error('Person relation must be non-empty')
-                raise AssertionError
+                raise RequiredInfoMissingError
             pseudo_user_id_map[pseudo_user_id] = person_pk
 
         vo, de, co = get_medical_info(record)
@@ -108,7 +109,7 @@ def main():
         vo_pk = _insert_with_pk(vo, 'visit_occurrence', conn)
         if vo_pk is None:
             logger.error('Visit occurrence relation must be non-empty')
-            raise AssertionError
+            raise RequiredInfoMissingError
 
         # setting foreign key again
         # could be empty table
