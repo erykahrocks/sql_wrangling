@@ -70,6 +70,12 @@ Execute `python main.py`
 * Far from incremental ETL
 * Pretty convenient when back-filling the data
 
+## Validation (visit_start_date, drug_exposure_start_date \geq birth_date)
+
+* Comparison only made on `year`
+* If visit_start_date is `2021-05-21` and birth_date is `2021-08-03`, validation passes
+* Only `year_of_birth` is required attribute
+
 # Assumption made on problem 7
 
 * The very first line of the note is a unique identifier for the patient
